@@ -1,0 +1,17 @@
+/target
+/classes
+/checkouts
+/.cpcache
+/.lein-*
+/.nrepl-port
+/.prepl-port
+/.rebel_readline_history
+/.clj-kondo/.cache
+/.calva
+/.lsp
+/.idea
+*.iml
+*.jar
+*.class
+.hgignore
+.hg/
