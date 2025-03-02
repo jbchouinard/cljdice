@@ -23,12 +23,32 @@
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
-           :main 'cljdice.core}))
+           :main 'cljdice.core})
+  (println "Uber jar built successfully:" uber-file)
+  uber-file)
+
+(defn check-native-image []
+  (let [result (sh "which" "native-image")]
+    (if (zero? (:exit result))
+      {:success true :path (str/trim (:out result))}
+      {:success false :message "GraalVM native-image tool not found in PATH. 
+Please install GraalVM and the native-image tool. 
+See https://www.graalvm.org/docs/getting-started/ for installation instructions."})))
 
 (defn native-image [_]
-  (uber nil)
-  (println "Building native image...")
-  (let [res (sh "clojure" "-M:native-image")]
-    (if (zero? (:exit res))
-      (println "Native image built successfully!")
-      (println "Error building native image:" (:err res)))))
+  (let [jar-file (uber nil)
+        native-image-check (check-native-image)]
+    (if (:success native-image-check)
+      (do
+        (println "Building native image using:" (:path native-image-check))
+        (println "This may take a few minutes...")
+        (let [cmd ["clojure" "-M:native-image"]
+              res (apply sh cmd)]
+          (if (zero? (:exit res))
+            (println "Native image built successfully!")
+            (do
+              (println "Error building native image:")
+              (println (:err res))
+              (println "Command output:")
+              (println (:out res))))))
+      (println (:message native-image-check)))))

@@ -1,40 +1,53 @@
-# CLJDice
+# cljdice
 
-A simple command-line dice roller written in Clojure.
+A command-line dice roller written in Clojure.
 
 ## Features
 
-- Roll any number of dice with any number of sides
-- Simple, intuitive command-line interface
-- Native executable support via GraalVM
+- Roll dice with any number of sides
+- Parse and evaluate complex dice expressions like `2d6+1d4+3`
+- Accurate probability modeling using dice algebra
+- Simple command-line interface
 
 ## Prerequisites
 
 - [Clojure CLI tools](https://clojure.org/guides/install_clojure)
 - Java JDK 11 or later
-- [GraalVM](https://www.graalvm.org/downloads/) (optional, for native image compilation)
 
 ## Usage
 
 Run directly with Clojure CLI:
 
 ```bash
-# Roll a single 6-sided die (default)
-clojure -M:run
-
-# Roll 3 20-sided dice
-clojure -M:run --dice 3 --sides 20
+# Roll dice using a dice expression
+clojure -M:run "3d6"
+clojure -M:run "d20+5"
+clojure -M:run "2d4+3d6-2"
 
 # Show help
 clojure -M:run --help
 ```
+
+### Dice Expression Syntax
+
+The dice expression syntax follows standard dice notation:
+
+- `NdS`: Roll N dice with S sides each (e.g., `3d6` for three six-sided dice)
+- `dS`: Roll one die with S sides (e.g., `d20` for one twenty-sided die)
+- `+`: Add dice or constants (e.g., `d20+5`)
+- `-`: Subtract dice or constants (e.g., `d6-1`)
+
+Examples:
+- `3d6`: Roll three six-sided dice
+- `d20+5`: Roll a twenty-sided die and add 5
+- `2d4+3d6-2`: Roll two four-sided dice, add three six-sided dice, and subtract 2
 
 ## Development
 
 ### Running Tests
 
 ```bash
-clojure -X:test
+clojure -M:test
 ```
 
 ### Building a JAR
@@ -45,26 +58,17 @@ clojure -T:build uber
 
 This will create a standalone JAR file in the `target` directory.
 
-### Building a Native Executable
-
-Requires GraalVM with `native-image` installed.
-
-```bash
-clojure -T:build native-image
-```
-
-This will create a native executable in the `target` directory.
 
 ## Project Structure
 
-- `src/cljdice/core.clj` - Main application code
-- `test/cljdice/core_test.clj` - Tests
-- `deps.edn` - Project dependencies and configuration
-- `build.clj` - Build tasks
+- `src/cljdice/core.clj`: Main entry point and CLI handling
+- `src/cljdice/dice.clj`: Core dice functionality
+- `src/cljdice/parser.clj`: Dice expression parser
+- `test/`: Test files
 
 ## License
 
-Copyright © 2025
+Copyright 2023
 
 This program and the accompanying materials are made available under the
 terms of the Eclipse Public License 2.0 which is available at
