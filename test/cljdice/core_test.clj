@@ -36,19 +36,19 @@
 
 (deftest process-args-test
   (testing "process-args function with valid arguments"
-    (with-redefs [println (fn [& args] nil)
+    (with-redefs [println (fn [& _] nil)
                   core/roll-dice-expression (fn [_] 42)]
       (is (= 0 (core/process-args ["d20"])))))
   
   (testing "process-args function with help flag"
-    (with-redefs [println (fn [& args] nil)]
+    (with-redefs [println (fn [& _] nil)]
       (is (= 0 (core/process-args ["--help"])))))
   
   (testing "process-args function with no arguments"
-    (with-redefs [println (fn [& args] nil)]
+    (with-redefs [println (fn [& _] nil)]
       (is (= 0 (core/process-args [])))))
   
   (testing "process-args function with invalid expression"
-    (with-redefs [println (fn [& args] nil)
+    (with-redefs [println (fn [& _] nil)
                   core/roll-dice-expression (fn [_] (throw (IllegalArgumentException. "Test exception")))]
       (is (= 1 (core/process-args ["invalid"]))))))

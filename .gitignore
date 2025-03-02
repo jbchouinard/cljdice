@@ -6,7 +6,7 @@
 /.nrepl-port
 /.prepl-port
 /.rebel_readline_history
-/.clj-kondo/.cache
+/.clj-kondo
 /.calva
 /.lsp
 /.idea
