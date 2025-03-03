@@ -1,7 +1,8 @@
 (ns build
   (:require [clojure.tools.build.api :as b]
             [clojure.java.shell :as shell]
-            [clojure.string :as str]))
+            [clojure.string :as str]
+            [clojure.java.io :as io]))
 
 (def lib 'cljdice/cljdice)
 (def version (format "0.1.%s" (b/git-count-revs nil)))
@@ -10,14 +11,24 @@
 (def uber-file (format "target/%s-%s-standalone.jar" (name lib) version))
 (def native-image-name "cljdice")
 (def native-image-path (str "target/" native-image-name))
+(def version-file "target/classes/cljdice/version.txt")
 
 (defn clean [_]
   (b/delete {:path "target"}))
+
+(defn write-version-file
+  "Write the version to a resource file that will be included in the JAR"
+  []
+  (let [version-dir (str/replace (str/replace version-file #"/[^/]+$" "") #"^target/classes/" "")
+        dir (io/file (str "target/classes/" version-dir))]
+    (.mkdirs dir)
+    (spit version-file version)))
 
 (defn uber [_]
   (clean nil)
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir})
+  (write-version-file)
   (b/compile-clj {:basis basis
                   :src-dirs ["src"]
                   :class-dir class-dir})
@@ -35,10 +46,11 @@
   (b/copy-dir {:src-dirs ["src" "resources"]
                :target-dir class-dir
                :include #(not (re-matches #".*profile\.clj$" %))})
+  (write-version-file)
   (b/compile-clj {:basis basis
                   :src-dirs ["src"]
                   :class-dir class-dir
-                  :ns-compile #{'cljdice.core 'cljdice.dice 'cljdice.parser 'cljdice.random}})
+                  :ns-compile #{'cljdice.core 'cljdice.dice 'cljdice.parser 'cljdice.stats 'cljdice.version}})
   (b/uber {:class-dir class-dir
            :uber-file uber-file
            :basis basis
@@ -51,6 +63,7 @@
         command ["native-image"
                  "--no-fallback"
                  "--initialize-at-build-time"
+                 "--initialize-at-run-time=java.util.Random"
                  "-H:+ReportExceptionStackTraces"
                  "-H:+UnlockExperimentalVMOptions"
                  "-H:Log=registerResource:"

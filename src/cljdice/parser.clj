@@ -6,10 +6,11 @@
 (def dice-parser
   (insta/parser
    "term = dice | term op dice
-    dice = ndice | ddice | ldice
-    ndice = number
-    ddice = count? <'d'> sides
-    ldice = <'['> number (<','>? number)* <']'>
+    dice = constant-die | uniform-dice | custom-dice
+    constant-die = number
+    custom-dice = count? <'d'> custom-sides
+    uniform-dice = count? <'d'> sides
+    custom-sides = <'['> number (<','>? number)* <']'>
     count = number
     sides = number
     number = #'[0-9]+'
@@ -19,28 +20,22 @@
    :auto-whitespace :standard))
 
 ;; Helper functions for parse tree evaluation
-(defn- eval-number
+(defn ^:private eval-number
   "Converts a number node to an integer."
   [[_ nstr]]
   (Integer/parseInt nstr))
 
-(defn- eval-number-inner
+(defn ^:private eval-number-inner
   "Extracts and evaluates a number from a nested node."
   [[_ number-node]]
   (eval-number number-node))
 
-(defn- eval-ldice
-  "Evaluates a list dice node (e.g., [1,2,3])."
-  [[_ & side-nodes]]
-  (let [sides (map eval-number side-nodes)]
-    (dice/die-with-sides-seq sides)))
-
-(defn- eval-ndice
-  "Evaluates a number dice node (e.g., 5)."
+(defn ^:private eval-constant-die
+  "Evaluates a constant die node (e.g., 5)."
   [[_ value-node]]
     (dice/die-constant (eval-number value-node)))
 
-(defn- eval-ddice
+(defn ^:private eval-uniform-dice
   "Evaluates a standard dice node (e.g., d6 or 2d6)."
   ([_ sides-node]
    (let [sides (eval-number-inner sides-node)]
@@ -54,15 +49,33 @@
        (throw (ex-info "Dice must have at least 1 side" {:sides sides})))
      (dice/die-repeated count (dice/d sides)))))
 
-(defn- eval-dice
+(defn ^:private eval-custom-sides 
+  [[_ & sides]]
+  (map eval-number sides))
+
+(defn ^:private eval-custom-dice
+  "Evaluates a custom dice node (e.g., d[1,3,5] or 2d[1,3,5])."
+  ([_ custom-sides-node]
+   (let [sides (eval-custom-sides custom-sides-node)]
+     (when (empty? sides)
+       (throw (ex-info "Custom dice must have at least 1 side" {:sides sides})))
+     (dice/die-with-sides-seq sides)))
+  ([_ count-node custom-sides-node]
+   (let [count (eval-number-inner count-node)
+         sides (eval-custom-sides custom-sides-node)]
+     (when (empty? sides)
+       (throw (ex-info "Custom dice must have at least 1 side" {:sides sides})))
+     (dice/die-repeated count (dice/die-with-sides-seq sides)))))
+
+(defn ^:private eval-dice
   "Evaluates a dice node by dispatching to the appropriate handler."
   [[_ [subnode-type _ :as subnode]]]
   (case subnode-type
-    :ddice (apply eval-ddice subnode)
-    :ndice (eval-ndice subnode)
-    :ldice (eval-ldice subnode)))
+    :uniform-dice (apply eval-uniform-dice subnode)
+    :constant-die (eval-constant-die subnode)
+    :custom-dice (apply eval-custom-dice subnode)))
 
-(defn- eval-term
+(defn ^:private eval-term
   "Evaluates a term node, which can be a single die or an operation on dice."
   ([_ dice-node]
    (eval-dice dice-node))

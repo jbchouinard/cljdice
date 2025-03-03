@@ -5,7 +5,7 @@
 
  :aliases
  {:run {:main-opts ["-m" "cljdice.core"]}
-
+  :dev {:extra-paths ["dev-src"]}
   :test {:extra-paths ["test"]
          :extra-deps {io.github.cognitect-labs/test-runner
                       {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
@@ -21,9 +21,10 @@
    :main-opts ["-m" "clj-easy.graal-build-time"]}
 
   :profile-run
-  {:extra-deps {com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}}
+  {:extra-paths ["dev-src"]
+   :extra-deps {com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}}
    :jvm-opts ["-Djdk.attach.allowAttachSelf=true"]
-   :exec-fn cljdice.profile/profile-main}
+   :exec-fn cljdice-dev.profile/profile-main}
 
   :neil {:deps {io.github.babashka/neil {:git/tag "v0.3.68"
                                          :git/sha "78ffab1"}}

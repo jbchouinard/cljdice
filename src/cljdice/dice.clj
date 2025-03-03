@@ -1,5 +1,5 @@
 (ns cljdice.dice
-  (:require [cljdice.random :as random]))
+  (:require [cljdice.stats :as random]))
 
 (def ^:dynamic *config* (atom {:use-exact-calculation false}))
 
@@ -122,7 +122,7 @@
   :die/repeated
   [[_ [count [die-type _ :as die]]]]
   (if (and (= die-type :die/uniform) 
-           (> count 100)
+           (>= count 10)
            (not (:use-exact-calculation @*config*)))
     (roll-die-normal-approx count die)
     (reduce + (map roll-die (repeat count die)))))

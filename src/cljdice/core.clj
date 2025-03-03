@@ -1,6 +1,7 @@
 (ns cljdice.core
   (:require [cljdice.dice :as dice]
             [cljdice.parser :as parser]
+            [cljdice.version :as version]
             [clojure.pprint :as pprint]
             [clojure.string :as string]
             [clojure.tools.cli :as cli])
@@ -32,7 +33,8 @@
 (def cli-options
   [["-h" "--help" "Show help message"]
    ["-s" "--show" "Show parsed dice expression instead of rolling"]
-   ["-e" "--exact" "Use exact calculation for large number of dice (disables normal approximation)"]])
+   ["-e" "--exact" "Use exact calculation for large number of dice (disables normal approximation)"]
+   ["-v" "--version" "Show version information"]])
 
 (defn run
   [args]
@@ -51,6 +53,10 @@
       (:help options)
       (do
         (println (usage (:summary opts)))
+        0)
+      (:version options)
+      (do
+        (println (version/version-string))
         0)
       :else
       (try (let [die (eval-dice-expression expr)]

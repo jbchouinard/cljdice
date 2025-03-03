@@ -1,5 +1,5 @@
-(ns cljdice.random-test
-  (:require [cljdice.random :as random]
+(ns cljdice.stats-test
+  (:require [cljdice.stats :as random]
             [clojure.test :refer [deftest is testing]]))
 
 (defn test-rand-normal
@@ -36,7 +36,7 @@
 (defn test-rand-normal-seq
   [mean std-dev]
   (let [sample-size 1000
-        samples (take sample-size (random/rand-normal-seq mean std-dev))
+        samples (take sample-size (repeatedly #(random/rand-normal mean std-dev)))
         
         ;; Calculate the actual mean and standard deviation of the samples
         actual-mean (/ (reduce + samples) sample-size)
