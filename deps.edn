@@ -16,6 +16,10 @@
   {:deps {io.github.clojure/tools.build {:git/tag "v0.9.6" :git/sha "8e78bcc"}}
    :ns-default build}
 
+  :native-image
+  {:deps {com.github.clj-easy/graal-build-time {:mvn/version "1.0.5"}}
+   :main-opts ["-m" "clj-easy.graal-build-time"]}
+
   :profile-run
   {:extra-deps {com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}}
    :jvm-opts ["-Djdk.attach.allowAttachSelf=true"]
