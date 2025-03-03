@@ -1,26 +1,13 @@
-(ns cljdice.dice)
+(ns cljdice.dice
+  (:require [cljdice.random :as random]))
+
+(def ^:dynamic *config* (atom {:use-exact-calculation false}))
 
 (derive :die/uniform ::die)
 (derive :die/with-sides ::die)
 (derive :die/constant ::die)
 (derive :die/multi ::die)
 (derive :die/repeated ::die)
-
-(defn rand-uniform
-  "Returns random integer between n0 and n1 (inclusive)."
-  [n0 n1]
-  (let [[nmin nmax] (sort [n0 n1])]
-    (+ nmin (rand-int (- nmax nmin -1)))))
-
-(defn rand-normal
-  "Box-Muller transform to generate random normal value"
-  ([]
-   (let [u1 (rand)
-         u2 (rand)]
-     (* (Math/sqrt (* -2 (Math/log u1)))
-        (Math/cos (* 2 Math/PI u2)))))
-  ([mean std-dev]
-   (+ mean (* std-dev (rand-normal)))))
 
 (defn d
   ([n] [:die/uniform [1 n]])
@@ -103,7 +90,7 @@
 (defmethod roll-die
   :die/uniform
   [[_ [from to]]]
-  (rand-uniform from to))
+  (random/rand-uniform from to))
 
 (defmethod roll-die
   :die/with-sides
@@ -129,13 +116,14 @@
         mean (* count (/ (+ from to) 2))
         variance (* count (- (* sides sides) 1) (/ 1 12))
         std-dev (Math/sqrt variance)]
-    (println (str "Roll die normal approx mean=" mean ", stddev=" std-dev))
-    (bounded-int (rand-normal mean std-dev) (* count from) (* count to))))
+    (bounded-int (random/rand-normal mean std-dev) (* count from) (* count to))))
 
 (defmethod roll-die
   :die/repeated
   [[_ [count [die-type _ :as die]]]]
-  (if (and (= die-type :die/uniform) (> count 100))
+  (if (and (= die-type :die/uniform) 
+           (> count 100)
+           (not (:use-exact-calculation @*config*)))
     (roll-die-normal-approx count die)
     (reduce + (map roll-die (repeat count die)))))
 

@@ -1,12 +1,14 @@
 (ns cljdice.core-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [cljdice.core :as core]
-            [cljdice.dice :as dice]))
+  (:require [cljdice.core :as core]
+            [cljdice.dice :as dice]
+            [clojure.test :refer [deftest is testing]]))
 
 (defn roll-dice-expression 
+  "Helper function to evaluate and roll a dice expression string."
   [expr] 
   (dice/roll-die (core/eval-dice-expression expr)))
 
+;; Test suite for roll-dice-expression function
 (deftest roll-dice-expression-test
   (testing "Rolling dice expressions"
     (testing "Single die"
@@ -35,10 +37,14 @@
         (is (<= 3 result 24)))))
   
   (testing "Invalid expressions"
-    (is (thrown? IllegalArgumentException (roll-dice-expression "not a dice expression")))
-    (is (thrown? IllegalArgumentException (roll-dice-expression "d0")))
-    (is (thrown? IllegalArgumentException (roll-dice-expression "")))))
+    (testing "Non-dice expression"
+      (is (thrown? IllegalArgumentException (roll-dice-expression "not a dice expression"))))
+    (testing "Invalid die count"
+      (is (thrown? IllegalArgumentException (roll-dice-expression "d0"))))
+    (testing "Empty expression"
+      (is (thrown? IllegalArgumentException (roll-dice-expression ""))))))
 
+;; Test suite for process-args function
 (deftest process-args-test
   (testing "process-args function with valid arguments"
     (with-redefs [println (fn [& _] nil)

@@ -1,9 +1,9 @@
 (ns cljdice.core
   (:require [cljdice.dice :as dice]
             [cljdice.parser :as parser]
+            [clojure.pprint :as pprint]
             [clojure.string :as string]
-            [clojure.tools.cli :refer [parse-opts]]
-            [clojure.pprint :refer [pprint]])
+            [clojure.tools.cli :as cli])
   (:gen-class))
 
 (defn eval-dice-expression
@@ -31,14 +31,18 @@
 
 (def cli-options
   [["-h" "--help" "Show help message"]
-   ["-s" "--show" "Show parsed dice expression instead of rolling"]])
+   ["-s" "--show" "Show parsed dice expression instead of rolling"]
+   ["-e" "--exact" "Use exact calculation for large number of dice (disables normal approximation)"]])
 
 (defn run
   [args]
-  (let [opts (parse-opts args cli-options)
+  (let [opts (cli/parse-opts args cli-options)
         options (:options opts)
         errors (:errors opts)
         expr (or (first (:arguments opts)) "")]
+    (when (:exact options)
+      (swap! dice/*config* assoc :use-exact-calculation true))
+    
     (cond
       errors
       (do
@@ -51,7 +55,7 @@
       :else
       (try (let [die (eval-dice-expression expr)]
              (if (:show options)
-               (pprint die)
+               (pprint/pprint die)
                (println (dice/roll-die die))))
            0
            (catch IllegalArgumentException e

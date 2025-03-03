@@ -16,6 +16,11 @@
   {:deps {io.github.clojure/tools.build {:git/tag "v0.9.6" :git/sha "8e78bcc"}}
    :ns-default build}
 
+  :profile-run
+  {:extra-deps {com.clojure-goes-fast/clj-async-profiler {:mvn/version "1.6.1"}}
+   :jvm-opts ["-Djdk.attach.allowAttachSelf=true"]
+   :exec-fn cljdice.profile/profile-main}
+
   :neil {:deps {io.github.babashka/neil {:git/tag "v0.3.68"
                                          :git/sha "78ffab1"}}
          :main-opts ["-m" "babashka.neil"]}}}

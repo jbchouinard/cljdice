@@ -15,3 +15,5 @@
 *.class
 .hgignore
 .hg/
+.windsurfrules
+.tool-versions
