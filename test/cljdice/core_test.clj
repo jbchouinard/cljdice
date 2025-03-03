@@ -1,54 +1,59 @@
 (ns cljdice.core-test
   (:require [clojure.test :refer [deftest is testing]]
-            [cljdice.core :as core]))
+            [cljdice.core :as core]
+            [cljdice.dice :as dice]))
+
+(defn roll-dice-expression 
+  [expr] 
+  (dice/roll-die (core/eval-dice-expression expr)))
 
 (deftest roll-dice-expression-test
   (testing "Rolling dice expressions"
     (testing "Single die"
-      (let [result (core/roll-dice-expression "d6")]
+      (let [result (roll-dice-expression "d6")]
         (is (integer? result))
         (is (<= 1 result 6))))
     
     (testing "Multiple dice"
-      (let [result (core/roll-dice-expression "2d6")]
+      (let [result (roll-dice-expression "2d6")]
         (is (integer? result))
         (is (<= 2 result 12))))
     
     (testing "Addition"
-      (let [result (core/roll-dice-expression "d6+3")]
+      (let [result (roll-dice-expression "d6+3")]
         (is (integer? result))
         (is (<= 4 result 9))))
     
     (testing "Subtraction"
-      (let [result (core/roll-dice-expression "d20-5")]
+      (let [result (roll-dice-expression "d20-5")]
         (is (integer? result))
         (is (<= -4 result 15))))
     
     (testing "Complex expressions"
-      (let [result (core/roll-dice-expression "2d4+3d6-2")]
+      (let [result (roll-dice-expression "2d4+3d6-2")]
         (is (integer? result))
         (is (<= 3 result 24)))))
   
   (testing "Invalid expressions"
-    (is (thrown? IllegalArgumentException (core/roll-dice-expression "not a dice expression")))
-    (is (thrown? IllegalArgumentException (core/roll-dice-expression "d0")))
-    (is (thrown? IllegalArgumentException (core/roll-dice-expression "")))))
+    (is (thrown? IllegalArgumentException (roll-dice-expression "not a dice expression")))
+    (is (thrown? IllegalArgumentException (roll-dice-expression "d0")))
+    (is (thrown? IllegalArgumentException (roll-dice-expression "")))))
 
 (deftest process-args-test
   (testing "process-args function with valid arguments"
     (with-redefs [println (fn [& _] nil)
-                  core/roll-dice-expression (fn [_] 42)]
-      (is (= 0 (core/process-args ["d20"])))))
+                  core/eval-dice-expression (fn [_] (dice/d 6))]
+      (is (= 0 (core/run ["d20"])))))
   
   (testing "process-args function with help flag"
     (with-redefs [println (fn [& _] nil)]
-      (is (= 0 (core/process-args ["--help"])))))
+      (is (= 0 (core/run ["--help"])))))
   
   (testing "process-args function with no arguments"
     (with-redefs [println (fn [& _] nil)]
-      (is (= 0 (core/process-args [])))))
+      (is (= 1 (core/run [])))))
   
   (testing "process-args function with invalid expression"
     (with-redefs [println (fn [& _] nil)
-                  core/roll-dice-expression (fn [_] (throw (IllegalArgumentException. "Test exception")))]
-      (is (= 1 (core/process-args ["invalid"]))))))
+                  core/eval-dice-expression (fn [_] (throw (IllegalArgumentException. "Test exception")))]
+      (is (= 1 (core/run ["invalid"]))))))

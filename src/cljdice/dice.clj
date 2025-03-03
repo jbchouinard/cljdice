@@ -12,6 +12,16 @@
   (let [[nmin nmax] (sort [n0 n1])]
     (+ nmin (rand-int (- nmax nmin -1)))))
 
+(defn rand-normal
+  "Box-Muller transform to generate random normal value"
+  ([]
+   (let [u1 (rand)
+         u2 (rand)]
+     (* (Math/sqrt (* -2 (Math/log u1)))
+        (Math/cos (* 2 Math/PI u2)))))
+  ([mean std-dev]
+   (+ mean (* std-dev (rand-normal)))))
+
 (defn d
   ([n] [:die/uniform [1 n]])
   ([n m] [:die/uniform [n m]]))
@@ -110,15 +120,24 @@
   [[_ dice]]
   (reduce + (map roll-die dice)))
 
+(defn bounded-int [v vmin vmax]
+  (max vmin (min vmax (Math/round (double v)))))
+
+(defn roll-die-normal-approx
+  [count [_ [from to]]]
+  (let [sides (+ 1 (- to from))
+        mean (* count (/ (+ from to) 2))
+        variance (* count (- (* sides sides) 1) (/ 1 12))
+        std-dev (Math/sqrt variance)]
+    (println (str "Roll die normal approx mean=" mean ", stddev=" std-dev))
+    (bounded-int (rand-normal mean std-dev) (* count from) (* count to))))
+
 (defmethod roll-die
   :die/repeated
-  [[_ [count die]]]
-  (reduce + (map roll-die (repeat count die))))
-
-(defn die-or-scalar-type [x]
-  (if (vector? x)
-    (die-type x)
-    :scalar))
+  [[_ [count [die-type _ :as die]]]]
+  (if (and (= die-type :die/uniform) (> count 100))
+    (roll-die-normal-approx count die)
+    (reduce + (map roll-die (repeat count die)))))
 
 (defmulti die-seq die-type)
 
@@ -128,10 +147,19 @@
 
 (defmethod die-seq :default [die] (cons die nil))
 
+(defn compact-const-dice
+  [dice-seq]
+  (let [grouped (group-by #(= :die/constant (first %)) dice-seq)
+        const-dice (get grouped true)
+        other-dice (get grouped false)
+        const-die (die-constant (reduce + (map #(nth % 1) const-dice)))]
+    (if (seq const-dice) (cons const-die other-dice) other-dice)))
+
 (defn compact-dice
   "Combines repeated dice where possible."
   [dice-seq]
-  (let [dice-seq-flat (mapcat die-seq dice-seq)
+  (let [dice-seq-const-compacted (compact-const-dice dice-seq)
+        dice-seq-flat (mapcat die-seq dice-seq-const-compacted)
         freqs (frequencies dice-seq-flat)]
     (into [] (map (fn [[k v]] (if (= 1 v) k (die-repeated v k))) (seq freqs)))))
 
@@ -144,48 +172,13 @@
 (defmulti dice+
   "Add dice or numbers together."
   (fn [a b]
-    [(die-or-scalar-type a) (die-or-scalar-type b)])
+    [(die-type a) (die-type b)])
   :hierarchy #'clojure.core/global-hierarchy)
-
-(defmethod dice+
-  [:scalar :scalar]
-  [na nb]
-  (die-constant (+ na nb)))
-
-(defmethod dice+
-  [:scalar ::die]
-  [number die]
-  (shift-die die number))
-
-(defmethod dice+
-  [::die :scalar]
-  [die number]
-  (shift-die die number))
 
 (defmethod dice+
   [:die/constant :die/constant]
   [[_ n1] [_ n2]]
   (die-constant (+ n1 n2)))
-
-(defmethod dice+
-  [:die/constant ::die]
-  [[_ n] die]
-  (shift-die die n))
-
-(defmethod dice+
-  [::die :die/constant]
-  [die [_ n]]
-  (shift-die die n))
-
-(defmethod dice+
-  [:die/multi :die/constant]
-  [[_ dvec] die]
-  (compact-die (conj dvec die)))
-
-(defmethod dice+
-  [:die/constant :die/multi]
-  [die [_ dvec]]
-  (compact-die (conj dvec die)))
 
 (defmethod dice+
   [:die/multi :die/multi]
@@ -194,12 +187,12 @@
 
 (defmethod dice+
   [:die/multi ::die]
-  [die [_ dvec]]
+  [[_ dvec] die]
   (compact-die (conj dvec die)))
 
 (defmethod dice+
   [::die :die/multi]
-  [[_ dvec] die]
+  [die [_ dvec]]
   (compact-die (conj dvec die)))
 
 (defmethod dice+

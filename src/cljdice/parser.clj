@@ -5,46 +5,54 @@
 (def dice-parser
   (insta/parser
    "term = dice | term op dice
-    dice = ndice | ddice
+    dice = ndice | ddice | ldice
     ndice = number
     ddice = count? <'d'> sides
+    ldice = <'['> number (<','>? number)* <']'>
     count = number
     sides = number
     number = #'[0-9]+'
     op = plus | minus
     plus = '+'
-    minus = '-'"))
+    minus = '-'"
+   :auto-whitespace :standard))
 
+(defn- eval-number
+  [[_ nstr]]
+  (Integer/parseInt nstr))
 
-(defn- eval-number-encl
-  [_ [_ value]]
-  (Integer/parseInt value))
+(defn- eval-number-inner
+  [[_ number-node]]
+  (eval-number number-node))
+
+(defn- eval-ldice
+  [[_ & side-nodes]]
+  (let [sides (map eval-number side-nodes)]
+    (dice/die-with-sides-seq sides)))
 
 (defn- eval-ndice
-  [node]
-  (let [n (apply eval-number-encl node)]
-    (dice/die-constant n)))
+  [[_ value-node]]
+    (dice/die-constant (eval-number value-node)))
 
 (defn- eval-ddice
   ([_ sides-node]
-   (let [sides (apply eval-number-encl sides-node)]
+   (let [sides (eval-number-inner sides-node)]
      (when (<= sides 0)
        (throw (ex-info "Dice must have at least 1 side" {:sides sides})))
      (dice/d sides)))
   ([_ count-node sides-node]
-   (let [count (apply eval-number-encl count-node)
-         sides (apply eval-number-encl sides-node)]
+   (let [count (eval-number-inner count-node)
+         sides (eval-number-inner sides-node)]
      (when (<= sides 0)
        (throw (ex-info "Dice must have at least 1 side" {:sides sides})))
      (dice/die-repeated count (dice/d sides)))))
 
 (defn- eval-dice
-  [[_ & children]]
-  (let [subnode (first children)
-        subnode-type (first subnode)]
-    (case subnode-type
-      :ddice (apply eval-ddice subnode)
-      :ndice (eval-ndice subnode))))
+  [[_ [subnode-type _ :as subnode]]]
+  (case subnode-type
+    :ddice (apply eval-ddice subnode)
+    :ndice (eval-ndice subnode)
+    :ldice (eval-ldice subnode)))
 
 (defn- eval-term
   ([_ dice-node]
@@ -57,17 +65,17 @@
      (dice/dice+ left-die right-die-signed))))
 
 (defn parse-dice-expression
-  "Parse a dice expression string like '2d6+1d4+3' and return a data structure"
+  "Parse a dice expression string like '2d6+1d4+3' and returns parse tree"
   [expr-str]
   (let [parse-tree (dice-parser expr-str)]
     (if (insta/failure? parse-tree)
-      (throw (ex-info "Failed to parse dice expression" 
+      (throw (ex-info "Failed to parse dice expression"
                       {:expr expr-str
                        :reason (:reason parse-tree)}))
       parse-tree)))
 
 (defn eval-dice-expression
-  "Evaluate a dice expression string and return a single die representing all possible outcomes"
+  "Evaluate a dice expression string and returns a die value"
   [expr-str]
   (when (empty? expr-str)
     (throw (ex-info "Empty dice expression" {:expr expr-str})))

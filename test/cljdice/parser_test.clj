@@ -36,11 +36,11 @@
     
     (testing "Addition"
       (let [result (parser/eval-dice-expression "d4+3")]
-        (is (= :die/uniform (dice/die-type result)))))
+        (is (= :die/multi (dice/die-type result)))))
     
     (testing "Subtraction"
       (let [result (parser/eval-dice-expression "d6-1")]
-        (is (= :die/uniform (dice/die-type result)))))
+        (is (= :die/multi (dice/die-type result)))))
     
     (testing "Complex expressions"
       (let [result (parser/eval-dice-expression "2d6+d4-2")]

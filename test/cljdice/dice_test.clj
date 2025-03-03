@@ -78,26 +78,29 @@
 
 (deftest dice-plus-test
   (testing "Adding dice"
-    (testing "scalar + scalar"
-      (is (= [:die/constant 7] (dice/dice+ 3 4))))
-    
-    (testing "scalar + die"
-      (let [result (dice/dice+ 3 (dice/d 6))]
-        (is (= :die/uniform (dice/die-type result)))
-        (is (= [4 9] (dice/die-value result)))))
-    
-    (testing "die + scalar"
-      (let [result (dice/dice+ (dice/d 6) 3)]
-        (is (= :die/uniform (dice/die-type result)))
-        (is (= [4 9] (dice/die-value result)))))
-    
     (testing "constant + constant"
       (let [result (dice/dice+ (dice/die-constant 3) (dice/die-constant 4))]
         (is (= :die/constant (dice/die-type result)))
         (is (= 7 (dice/die-value result)))))
     
-    (testing "die + die"
-      (let [result (dice/dice+ (dice/d 4) (dice/d 6))]
+    (testing "multi + multi"
+      (let [result (dice/dice+ 
+                    (dice/die-multi (dice/d 4)) 
+                    (dice/die-multi (dice/d 6)))]
+        (is (= :die/multi (dice/die-type result)))
+        (is (= 2 (count (dice/die-value result))))))
+    
+    (testing "multi + die"
+      (let [result (dice/dice+ 
+                    (dice/die-multi (dice/d 4)) 
+                    (dice/d 6))]
+        (is (= :die/multi (dice/die-type result)))
+        (is (= 2 (count (dice/die-value result))))))
+    
+    (testing "die + multi"
+      (let [result (dice/dice+ 
+                    (dice/d 4)
+                    (dice/die-multi (dice/d 6)))]
         (is (= :die/multi (dice/die-type result)))
         (is (= 2 (count (dice/die-value result))))))))
 
@@ -129,7 +132,7 @@
     (let [dice-seq [(dice/die-constant 5) (dice/die-constant 5) (dice/die-constant 5)]
           result (dice/compact-dice dice-seq)]
       (is (= 1 (count result)))
-      (is (= [:die/repeated [3 [:die/constant 5]]] (first result))))))
+      (is (= [:die/constant 15] (first result))))))
 
 (deftest compact-die-test
   (testing "Compacting dice into a single die"
