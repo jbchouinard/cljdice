@@ -4,53 +4,42 @@
 #   make clean      - Clean build artifacts
 #   make test       - Run tests
 #   make jar        - Build standalone jar
-#   make native     - Build native executable
+#   make target/cljdice - Build native executable
 #   make install    - Install native executable to /usr/local/bin
 #   make all        - Build both jar and native executable
 
 # Configuration
-CLOJURE = clojure
-JAR_NAME = target/cljdice-standalone.jar
+CLOJURE = clj
 NATIVE_NAME = target/cljdice
 PREFIX = /usr/local
 
-.PHONY: all clean test jar native install dev-repl
+.PHONY: all clean test test-dev jar install dev-repl profile version help
 
 # Default target
-all: jar native
+all: jar $(NATIVE_NAME)
 
 # Clean build artifacts
 clean:
-	@echo "Cleaning build artifacts..."
 	@rm -rf target
-	@echo "Clean complete."
 
 # Run tests
 test:
-	@echo "Running tests..."
 	@$(CLOJURE) -M:test
-	@echo "Tests complete."
 
 # Run tests with development utilities
 test-dev:
-	@echo "Running tests with development utilities..."
 	@$(CLOJURE) -M:dev:test
-	@echo "Tests complete."
 
-# Build standalone jar
+# Build standalone jar - this is a phony target since the actual file name includes the version
 jar:
-	@echo "Building standalone jar..."
 	@$(CLOJURE) -T:build uber
-	@echo "Jar build complete: $(JAR_NAME)"
 
 # Build native executable
-native:
-	@echo "Building native executable..."
+$(NATIVE_NAME):
 	@$(CLOJURE) -T:build native-image
-	@echo "Native build complete: $(NATIVE_NAME)"
 
 # Install native executable
-install: native
+install: $(NATIVE_NAME)
 	@echo "Installing to $(PREFIX)/bin..."
 	@install -d $(PREFIX)/bin
 	@install -m 755 $(NATIVE_NAME) $(PREFIX)/bin
@@ -59,7 +48,7 @@ install: native
 # Start a REPL with development utilities
 dev-repl:
 	@echo "Starting development REPL..."
-	@$(CLOJURE) -M:dev:repl
+	@$(CLOJURE) -M:dev
 
 # Run profiling
 profile:
@@ -76,14 +65,14 @@ help:
 	@echo "cljdice Makefile"
 	@echo ""
 	@echo "Available targets:"
-	@echo "  all        - Build both jar and native executable (default)"
-	@echo "  clean      - Clean build artifacts"
-	@echo "  test       - Run tests"
-	@echo "  test-dev   - Run tests with development utilities"
-	@echo "  jar        - Build standalone jar"
-	@echo "  native     - Build native executable"
-	@echo "  install    - Install native executable to $(PREFIX)/bin"
-	@echo "  dev-repl   - Start a REPL with development utilities"
-	@echo "  profile    - Run profiling"
-	@echo "  version    - Show version"
-	@echo "  help       - Show this help message"
+	@echo "  all           - Build both jar and native executable (default)"
+	@echo "  clean         - Clean build artifacts"
+	@echo "  test          - Run tests"
+	@echo "  test-dev      - Run tests with development utilities"
+	@echo "  jar           - Build standalone jar"
+	@echo "  $(NATIVE_NAME)- Build native executable"
+	@echo "  install       - Install native executable to $(PREFIX)/bin"
+	@echo "  dev-repl      - Start a REPL with development utilities"
+	@echo "  profile       - Run profiling"
+	@echo "  version       - Show version"
+	@echo "  help          - Show this help message"
