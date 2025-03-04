@@ -86,25 +86,59 @@
    {}
    dist1))
 
-(defn single-die-distribution
+(defn die-pdf
+  "Returns the probability distribution for a single die with given sides.
+   Result is a map from outcome to probability (1/s)."
+  [sides]
+  (when (empty? sides)
+    (throw (ex-info "Cannot calculate probability distribution for die with no sides" {:sides sides})))
+  (let [freqs (frequencies sides)
+        total (count sides)]
+    (reduce-kv (fn [acc k v] (assoc acc k (/ v total))) {} freqs)))
+
+(defn uniform-die-pdf
   "Returns the probability distribution for a single die with s sides.
    Result is a map from outcome (1 to s) to probability (1/s)."
   [sides]
-  (let [prob (/ 1.0 sides)]
-    (into {} (map #(vector % prob) (range 1 (inc sides))))))
+  (die-pdf (range 1 (inc sides))))
 
-(defn dice-sum-distribution
+(defn dice-sum-pdf
+  "Calculates the probability distribution for the sum of a sequence of dice.
+   Each die in the sequence is represented by a list of sides, and the function
+   returns a map where keys are possible sums and values are their probabilities."
+  [dseq]
+  (cond
+    (empty? dseq) {}
+    (and (seq dseq) (not (next dseq))) (die-pdf (first dseq))
+    :else (let [first-dist (die-pdf (first dseq))
+                rest-dist (dice-sum-pdf (rest dseq))]
+            (convolve-distributions first-dist rest-dist))))
+
+(defn compute-cdf
+  [pdf-map]
+  (let [sorted-pdf (into (sorted-map) pdf-map)]
+    (into (sorted-map) (reductions
+                        (fn [[_ cum-p] [next-outcome next-p]] [next-outcome (+ cum-p next-p)])
+                        (first sorted-pdf)
+                        (rest sorted-pdf)))))
+
+(defn rand-sample-cdf
+  [cdf]
+  (let [x (rand)]
+    (first (first (second (split-with (fn [[_ cp]] (< cp x)) cdf))))))
+
+(defn uniform-dice-sum-pdf
   "Calculates the exact probability distribution for the sum of n dice with s sides each.
    Returns a map where keys are possible sums and values are their probabilities."
   [n sides]
   (cond
     (< n 1) {}
-    (= n 1) (single-die-distribution sides)
-    :else (let [single-dist (single-die-distribution sides)
-                rest-dist (dice-sum-distribution (dec n) sides)]
+    (= n 1) (uniform-die-pdf sides)
+    :else (let [single-dist (uniform-die-pdf sides)
+                rest-dist (uniform-dice-sum-pdf (dec n) sides)]
             (convolve-distributions single-dist rest-dist))))
 
-(defn dice-stats
+(defn uniform-dice-stats
   "Calculates the mean and standard deviation for n dice with s sides each.
    Returns a vector [mean stddev]."
   [n sides]

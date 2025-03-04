@@ -12,7 +12,7 @@
    
    Returns a map of possible outcomes to their probabilities according to normal approximation."
   [n sides]
-  (let [[mean stddev] (stats/dice-stats n sides)
+  (let [[mean stddev] (stats/uniform-dice-stats n sides)
         min-value n
         max-value (* n sides)
         outcomes (range min-value (inc max-value))
@@ -69,7 +69,7 @@
    - :normal - The normal approximation distribution
    - :ks-stat - The Kolmogorov-Smirnov statistic measuring the difference"
   [n sides]
-  (let [exact (stats/dice-sum-distribution n sides)
+  (let [exact (stats/uniform-dice-sum-pdf n sides)
         normal (normal-approximation-distribution n sides)
         ks-stat (kolmogorov-smirnov-statistic exact normal)]
     {:exact exact
@@ -85,7 +85,7 @@
   ;; Benchmark exact distribution calculation
   (println "  Calculating exact distribution...")
   (let [start-time (System/currentTimeMillis)
-        exact-result (stats/dice-sum-distribution n sides)
+        exact-result (stats/uniform-dice-sum-pdf n sides)
         exact-time (- (System/currentTimeMillis) start-time)]
     (println "  Exact distribution calculation took" exact-time "ms")
     (println "  Distribution has" (count exact-result) "outcomes")

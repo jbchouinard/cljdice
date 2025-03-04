@@ -1,5 +1,5 @@
 (ns cljdice.dice
-  (:require [cljdice.stats :as random]))
+  (:require [cljdice.stats :as stats]))
 
 (def ^:dynamic *config* (atom {:use-exact-calculation false}))
 
@@ -90,7 +90,7 @@
 (defmethod roll-die
   :die/uniform
   [[_ [from to]]]
-  (random/rand-uniform from to))
+  (stats/rand-uniform from to))
 
 (defmethod roll-die
   :die/with-sides
@@ -116,7 +116,7 @@
         mean (* count (/ (+ from to) 2))
         variance (* count (- (* sides sides) 1) (/ 1 12))
         std-dev (Math/sqrt variance)]
-    (bounded-int (random/rand-normal mean std-dev) (* count from) (* count to))))
+    (bounded-int (stats/rand-normal mean std-dev) (* count from) (* count to))))
 
 (defmethod roll-die
   :die/repeated
@@ -189,3 +189,15 @@
   (compact-die [die1 die2]))
 
 (defn dice-sum [& dice] (reduce dice+ dice))
+
+(defmulti die-sides die-type)
+(defmethod die-sides :die/constant [[_ n]] [n])
+(defmethod die-sides :die/uniform [[_ [from to]]] (into [] (range from (inc to))))
+(defmethod die-sides :die/with-sides [[_ sides]] sides)
+
+(defn dice-sides-seq [die] (map die-sides (die-seq die)))
+
+(defn die-pdf [die] (stats/dice-sum-pdf (dice-sides-seq die)))
+(defn die-cdf [die] (stats/compute-cdf (die-pdf die)))
+
+(defn roll-die-using-cdf [die] (stats/rand-sample-cdf (die-cdf die)))

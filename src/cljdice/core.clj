@@ -16,6 +16,29 @@
       (throw (IllegalArgumentException.
               (str "Invalid dice expression \"" expr-str "\": " (.getMessage e)))))))
 
+(defn pprint-df
+  "Pretty prints a probability distribution (PDF or CDF) with percentages instead of ratios.
+   
+   Parameters:
+   - dist: A map where keys are outcomes and values are probabilities
+   - title: Optional title to display before the distribution
+   - decimal-places: Number of decimal places to show (default: 2)"
+  ([dist] (pprint-df dist nil 2))
+  ([dist title] (pprint-df dist title 2))
+  ([dist title decimal-places]
+   (when title
+     (println title))
+   (if (empty? dist)
+     (println "No data to display.")
+     (let [sorted-dist (sort-by first (seq dist))
+           max-outcome-width (apply max (map (comp count str first) sorted-dist))
+           outcome-format (str "%" max-outcome-width "d")
+           percent-format (str "%6." decimal-places "f%%")]
+       (doseq [[outcome prob] sorted-dist]
+         (println (format (str outcome-format ": " percent-format)
+                          outcome
+                          (* 100.0 (double prob)))))))))
+
 (defn usage [options-summary]
   (->> ["cljdice - Virtual dice roller"
         ""
@@ -32,9 +55,11 @@
 
 (def cli-options
   [["-h" "--help" "Show help message"]
-   ["-s" "--show" "Show parsed dice expression instead of rolling"]
+   ["-p" "--parse" "Show parsed dice expression instead of rolling"]
    ["-e" "--exact" "Use exact calculation for large number of dice (disables normal approximation)"]
-   ["-v" "--version" "Show version information"]])
+   ["-v" "--version" "Show version information"]
+   [nil, "--pdf" "Show probability distribution function of the dice expression"]
+   [nil, "--cdf" "Show cumulative distribution function of the dice expression"]])
 
 (defn run
   [args]
@@ -44,33 +69,46 @@
         expr (or (first (:arguments opts)) "")]
     (when (:exact options)
       (swap! dice/*config* assoc :use-exact-calculation true))
-    
+
     (cond
       errors
-      (do
-        (println (string/join \newline errors))
-        0)
+      (throw (IllegalArgumentException. (string/join \newline errors)))
+      
       (:help options)
-      (do
-        (println (usage (:summary opts)))
-        0)
+      (println (usage (:summary opts)))
+      
       (:version options)
-      (do
-        (println (version/version-string))
-        0)
+      (println (version/version-string))
+      
       :else
-      (try (let [die (eval-dice-expression expr)]
-             (if (:show options)
-               (pprint/pprint die)
-               (println (dice/roll-die die))))
-           0
-           (catch IllegalArgumentException e
-             (println (.getMessage e))
-             1)))))
+      (let [die (eval-dice-expression expr)]
+        (cond
+          (:parse options)
+          (pprint/pprint die)
+
+          (:pdf options)
+          (pprint-df (dice/die-pdf die)
+                     (str "Probability Distribution for: " expr)
+                     6)
+
+          (:cdf options)
+          (pprint-df (dice/die-cdf die)
+                     (str "Cumulative Distribution for: " expr)
+                     6)
+
+          :else
+          (println (dice/roll-die die)))))))
 
 (defn -main
   [& args]
-  (System/exit (run args)))
+  (try
+    (run args)
+    (catch IllegalArgumentException e
+      (println (.getMessage e))
+      (System/exit 1))
+    (catch Exception e
+      (println "An unexpected error occurred:" (.getMessage e))
+      (System/exit 1))))
 
 (comment
   ;; For REPL development
